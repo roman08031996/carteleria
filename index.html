@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carteles LED - Diseñador PCB Casero</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Bebas+Neue&family=Inter:wght@300;400;500;600&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --neon-green: #00ff88;
+    --neon-amber: #ffaa00;
+    --neon-red: #ff3355;
+    --dark-bg: #0a0e1a;
+    --card-bg: #111827;
+    --card-border: #1e293b;
+    --text-primary: #e2e8f0;
+    --text-muted: #64748b;
+    --copper: #b87333;
+    --copper-light: #d4956a;
+    --led-on: #ffdd00;
+    --led-off: #2a2a1a;
+    --solder-mask: #006633;
+  }
+
+  body {
+    background: var(--dark-bg);
+    color: var(--text-primary);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+  }
+
+  header {
+    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+    border-bottom: 1px solid #312e81;
+    padding: 2rem 2rem 1.5rem;
+    text-align: center;
+  }
+
+  .site-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 3rem;
+    letter-spacing: 0.1em;
+    color: var(--neon-green);
+    text-shadow: 0 0 20px rgba(0,255,136,0.4);
+    margin-bottom: 0.25rem;
+  }
+
+  .site-subtitle {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    font-family: 'Share Tech Mono', monospace;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+
+  .container { max-width: 1100px; margin: 0 auto; padding: 2rem; }
+
+  /* TABS */
+  .tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 2rem;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .tab-btn {
+    flex: 1;
+    padding: 0.85rem 1rem;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-right: 1px solid var(--card-border);
+    text-transform: uppercase;
+  }
+  .tab-btn:last-child { border-right: none; }
+  .tab-btn:hover { color: var(--text-primary); background: #1e293b; }
+  .tab-btn.active { background: #1e3a5f; color: var(--neon-green); border-bottom: 2px solid var(--neon-green); }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* SIGN SELECTOR */
+  .sign-selector {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+  }
+
+  .sign-btn {
+    padding: 0.6rem 1.4rem;
+    border-radius: 6px;
+    border: 1.5px solid var(--card-border);
+    background: var(--card-bg);
+    color: var(--text-muted);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1rem;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .sign-btn:hover { border-color: var(--neon-amber); color: var(--neon-amber); }
+  .sign-btn.active-abierto { border-color: var(--neon-green); color: var(--neon-green); background: rgba(0,255,136,0.05); }
+  .sign-btn.active-cerrado { border-color: var(--neon-red); color: var(--neon-red); background: rgba(255,51,85,0.05); }
+  .sign-btn.active-negocio { border-color: var(--neon-amber); color: var(--neon-amber); background: rgba(255,170,0,0.05); }
+
+  /* LED DISPLAY */
+  .led-display-wrapper {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .led-canvas-container {
+    background: #060a0e;
+    border-radius: 8px;
+    padding: 1.5rem 1rem;
+    display: flex;
+    justify-content: center;
+    border: 1px solid #0f172a;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .led-canvas-container::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,255,136,0.015) 3px, rgba(0,255,136,0.015) 4px);
+    pointer-events: none;
+  }
+
+  .dot-grid {
+    display: grid;
+    gap: 4px;
+  }
+
+  .led-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--led-off);
+    transition: background 0.1s, box-shadow 0.1s;
+  }
+
+  .led-dot.on-green {
+    background: #00ff44;
+    box-shadow: 0 0 6px #00ff44, 0 0 12px rgba(0,255,68,0.4);
+  }
+  .led-dot.on-red {
+    background: #ff3344;
+    box-shadow: 0 0 6px #ff3344, 0 0 12px rgba(255,51,68,0.4);
+  }
+  .led-dot.on-amber {
+    background: #ffbb00;
+    box-shadow: 0 0 6px #ffbb00, 0 0 12px rgba(255,187,0,0.4);
+  }
+
+  .display-info {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--card-border);
+  }
+
+  .info-pill {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.75rem;
+    padding: 0.3rem 0.8rem;
+    border-radius: 4px;
+    background: #1e293b;
+    color: var(--text-muted);
+  }
+
+  .info-pill span { color: var(--neon-green); }
+
+  /* CIRCUIT SCHEMATIC */
+  .schematic-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .section-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.4rem;
+    letter-spacing: 0.1em;
+    color: var(--neon-amber);
+    margin-bottom: 1rem;
+  }
+
+  .circuit-svg { width: 100%; max-width: 700px; display: block; margin: 0 auto; }
+
+  /* COMPONENTS TABLE */
+  .comp-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    margin-top: 1rem;
+  }
+
+  .comp-table th {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid var(--card-border);
+    text-align: left;
+  }
+
+  .comp-table td {
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid #1a2332;
+    color: var(--text-primary);
+  }
+
+  .comp-table tr:hover td { background: #1e293b; }
+  .comp-badge {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 3px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.75rem;
+  }
+  .badge-res { background: rgba(255,170,0,0.15); color: var(--neon-amber); }
+  .badge-led { background: rgba(0,255,136,0.1); color: var(--neon-green); }
+  .badge-pwr { background: rgba(99,102,241,0.15); color: #a5b4fc; }
+  .badge-con { background: rgba(255,51,85,0.1); color: var(--neon-red); }
+
+  /* PCB DESIGN */
+  .pcb-view {
+    background: var(--solder-mask);
+    border-radius: 8px;
+    padding: 1.5rem;
+    display: flex;
+    justify-content: center;
+    margin: 1rem 0;
+  }
+
+  .pcb-svg { width: 100%; max-width: 680px; }
+
+  .bw-toggle {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    margin-bottom: 1rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+
+  .bw-toggle input[type="checkbox"] { accent-color: var(--neon-green); }
+
+  /* STEP GUIDE */
+  .step-list { list-style: none; counter-reset: step-counter; }
+
+  .step-item {
+    counter-increment: step-counter;
+    display: flex;
+    gap: 1rem;
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--card-border);
+    align-items: flex-start;
+  }
+
+  .step-item:last-child { border-bottom: none; }
+
+  .step-num {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #1e293b;
+    border: 1.5px solid var(--neon-amber);
+    color: var(--neon-amber);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .step-content h4 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+  }
+
+  .step-content p {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+
+  .warn-box {
+    background: rgba(255,170,0,0.08);
+    border: 1px solid rgba(255,170,0,0.3);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-size: 0.82rem;
+    color: #fcd34d;
+    margin: 0.75rem 0;
+  }
+
+  .warn-box::before { content: '⚠ '; }
+
+  .ok-box {
+    background: rgba(0,255,136,0.06);
+    border: 1px solid rgba(0,255,136,0.2);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-size: 0.82rem;
+    color: #6ee7b7;
+    margin: 0.75rem 0;
+  }
+
+  .ok-box::before { content: '✓ '; }
+
+  /* CONNECTION GUIDE */
+  .conn-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+
+  .conn-card {
+    background: #0f172a;
+    border: 1px solid var(--card-border);
+    border-radius: 8px;
+    padding: 1rem;
+  }
+
+  .conn-card h4 {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    margin-bottom: 0.75rem;
+  }
+
+  .led-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.35rem 0;
+    border-bottom: 1px solid #1a2332;
+    font-size: 0.8rem;
+  }
+
+  .led-row:last-child { border-bottom: none; }
+
+  .led-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .ind-green { background: #00ff44; box-shadow: 0 0 4px #00ff44; }
+  .ind-red { background: #ff3344; box-shadow: 0 0 4px #ff3344; }
+  .ind-amber { background: #ffbb00; box-shadow: 0 0 4px #ffbb00; }
+
+  .led-row span { color: var(--text-muted); }
+  .led-row .val { color: var(--text-primary); font-family: 'Share Tech Mono', monospace; }
+
+  /* ANIMATION */
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.2; }
+  }
+
+  .blink-mode .led-dot.on-red,
+  .blink-mode .led-dot.on-amber { animation: blink 0.8s ease-in-out infinite; }
+
+  .anim-controls {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .anim-btn {
+    padding: 0.4rem 1rem;
+    border-radius: 5px;
+    border: 1px solid var(--card-border);
+    background: var(--card-bg);
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'Share Tech Mono', monospace;
+  }
+  .anim-btn:hover { border-color: var(--neon-green); color: var(--neon-green); }
+  .anim-btn.active { border-color: var(--neon-green); color: var(--neon-green); background: rgba(0,255,136,0.05); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="site-title">CARTEL LED PCB</div>
+  <div class="site-subtitle">Diseñador de carteles electrónicos caseros · 5V DC · LEDs de 5mm</div>
+</header>
+
+<div class="container">
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="showTab('diseno')">① Diseño LED</button>
+    <button class="tab-btn" onclick="showTab('circuito')">② Esquema</button>
+    <button class="tab-btn" onclick="showTab('pcb')">③ PCB / Pistas</button>
+    <button class="tab-btn" onclick="showTab('conexion')">④ Conexiones</button>
+    <button class="tab-btn" onclick="showTab('manual')">⑤ Manual</button>
+  </div>
+
+  <!-- TAB 1: DISEÑO LED -->
+  <div class="tab-panel active" id="tab-diseno">
+
+    <div style="margin-bottom:1rem;">
+      <div class="section-title">Seleccionar Cartel</div>
+      <div class="sign-selector">
+        <button class="sign-btn active-abierto" onclick="setSign('ABIERTO')">ABIERTO</button>
+        <button class="sign-btn" onclick="setSign('CERRADO')">CERRADO</button>
+        <button class="sign-btn" onclick="setSign('NEGOCIO')">NEGOCIO</button>
+      </div>
+
+      <div class="anim-controls">
+        <button class="anim-btn active" onclick="setAnim('static')">Estático</button>
+        <button class="anim-btn" onclick="setAnim('blink')">Parpadeante</button>
+      </div>
+    </div>
+
+    <div class="led-display-wrapper">
+      <div class="led-canvas-container">
+        <div id="dot-grid" class="dot-grid"></div>
+      </div>
+      <div class="display-info">
+        <div class="info-pill">LEDs totales: <span id="info-leds">0</span></div>
+        <div class="info-pill">Corriente: <span id="info-current">0</span> mA</div>
+        <div class="info-pill">Resistencias: <span id="info-res">0</span>Ω · 1/4W</div>
+        <div class="info-pill">Alimentación: <span>5V DC</span></div>
+        <div class="info-pill">Color: <span id="info-color">Verde</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- TAB 2: ESQUEMA -->
+  <div class="tab-panel" id="tab-circuito">
+
+    <div class="schematic-card">
+      <div class="section-title">Esquema Electrónico</div>
+      <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1rem;">
+        Cada LED se conecta en serie con una resistencia limitadora. Los LEDs se agrupan en filas paralelas para reducir corriente total.
+      </p>
+      <svg class="circuit-svg" viewBox="0 0 680 380" xmlns="http://www.w3.org/2000/svg">
+        <!-- Background grid -->
+        <defs>
+          <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+            <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+          </pattern>
+          <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+            <path d="M2 1L8 5L2 9" fill="none" stroke="#00ff88" stroke-width="1.5" stroke-linecap="round"/>
+          </marker>
+        </defs>
+        <rect width="680" height="380" fill="url(#grid)" rx="8"/>
+
+        <!-- Power supply -->
+        <rect x="20" y="140" width="80" height="100" rx="6" fill="#1e1b4b" stroke="#312e81" stroke-width="1.5"/>
+        <text x="60" y="183" text-anchor="middle" fill="#a5b4fc" font-family="Share Tech Mono, monospace" font-size="11">5V DC</text>
+        <text x="60" y="200" text-anchor="middle" fill="#a5b4fc" font-family="Share Tech Mono, monospace" font-size="9">FUENTE</text>
+        <!-- + terminal -->
+        <line x1="100" y1="160" x2="140" y2="160" stroke="#ff4444" stroke-width="2"/>
+        <text x="108" y="155" fill="#ff6666" font-size="11" font-family="Share Tech Mono, monospace">+</text>
+        <!-- - terminal -->
+        <line x1="100" y1="220" x2="140" y2="220" stroke="#4488ff" stroke-width="2"/>
+        <text x="108" y="236" fill="#6699ff" font-size="11" font-family="Share Tech Mono, monospace">-</text>
+
+        <!-- Switch -->
+        <rect x="140" y="148" width="40" height="24" rx="4" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+        <text x="160" y="164" text-anchor="middle" fill="#94a3b8" font-size="9" font-family="Share Tech Mono, monospace">SW1</text>
+        <line x1="180" y1="160" x2="220" y2="160" stroke="#ff4444" stroke-width="2"/>
+
+        <!-- VCC bus -->
+        <line x1="220" y1="160" x2="220" y2="60" stroke="#ff4444" stroke-width="2"/>
+        <line x1="220" y1="60" x2="640" y2="60" stroke="#ff4444" stroke-width="2"/>
+        <text x="390" y="52" text-anchor="middle" fill="#ff6666" font-size="10" font-family="Share Tech Mono, monospace">VCC (+5V)</text>
+
+        <!-- GND bus -->
+        <line x1="140" y1="220" x2="640" y2="220" stroke="#4488ff" stroke-width="2"/>
+        <line x1="640" y1="60" x2="640" y2="220" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4 3"/>
+        <text x="390" y="238" text-anchor="middle" fill="#6699ff" font-size="10" font-family="Share Tech Mono, monospace">GND (0V)</text>
+
+        <!-- LED Branch 1 -->
+        <!-- Resistor 1 -->
+        <line x1="280" y1="60" x2="280" y2="90" stroke="#ff4444" stroke-width="1.5"/>
+        <rect x="265" y="90" width="30" height="14" rx="3" fill="#1e293b" stroke="#ffaa00" stroke-width="1.5"/>
+        <text x="280" y="101" text-anchor="middle" fill="#ffaa00" font-size="9" font-family="Share Tech Mono, monospace">R1</text>
+        <text x="320" y="101" fill="#94a3b8" font-size="8" font-family="Share Tech Mono, monospace">100Ω</text>
+        <line x1="280" y1="104" x2="280" y2="130" stroke="#ffaa00" stroke-width="1.5"/>
+        <!-- LED 1 -->
+        <polygon points="270,130 290,130 280,145" fill="rgba(0,255,68,0.3)" stroke="#00ff44" stroke-width="1.5"/>
+        <line x1="270" y1="145" x2="290" y2="145" stroke="#00ff44" stroke-width="1.5"/>
+        <circle cx="280" cy="137" r="2" fill="#00ff44"/>
+        <line x1="280" y1="145" x2="280" y2="180" stroke="#00ff44" stroke-width="1.5"/>
+        <line x1="280" y1="180" x2="280" y2="220" stroke="#4488ff" stroke-width="1.5"/>
+        <text x="300" y="143" fill="#00ff88" font-size="8" font-family="Share Tech Mono, monospace">LED</text>
+        <text x="300" y="152" fill="#64748b" font-size="8" font-family="Share Tech Mono, monospace">5mm</text>
+
+        <!-- LED Branch 2 -->
+        <line x1="380" y1="60" x2="380" y2="90" stroke="#ff4444" stroke-width="1.5"/>
+        <rect x="365" y="90" width="30" height="14" rx="3" fill="#1e293b" stroke="#ffaa00" stroke-width="1.5"/>
+        <text x="380" y="101" text-anchor="middle" fill="#ffaa00" font-size="9" font-family="Share Tech Mono, monospace">R2</text>
+        <text x="420" y="101" fill="#94a3b8" font-size="8" font-family="Share Tech Mono, monospace">100Ω</text>
+        <line x1="380" y1="104" x2="380" y2="130" stroke="#ffaa00" stroke-width="1.5"/>
+        <polygon points="370,130 390,130 380,145" fill="rgba(0,255,68,0.3)" stroke="#00ff44" stroke-width="1.5"/>
+        <line x1="370" y1="145" x2="390" y2="145" stroke="#00ff44" stroke-width="1.5"/>
+        <circle cx="380" cy="137" r="2" fill="#00ff44"/>
+        <line x1="380" y1="145" x2="380" y2="220" stroke="#4488ff" stroke-width="1.5"/>
+
+        <!-- LED Branch 3 -->
+        <line x1="480" y1="60" x2="480" y2="90" stroke="#ff4444" stroke-width="1.5"/>
+        <rect x="465" y="90" width="30" height="14" rx="3" fill="#1e293b" stroke="#ffaa00" stroke-width="1.5"/>
+        <text x="480" y="101" text-anchor="middle" fill="#ffaa00" font-size="9" font-family="Share Tech Mono, monospace">R3</text>
+        <text x="520" y="101" fill="#94a3b8" font-size="8" font-family="Share Tech Mono, monospace">100Ω</text>
+        <line x1="480" y1="104" x2="480" y2="130" stroke="#ffaa00" stroke-width="1.5"/>
+        <polygon points="470,130 490,130 480,145" fill="rgba(0,255,68,0.3)" stroke="#00ff44" stroke-width="1.5"/>
+        <line x1="470" y1="145" x2="490" y2="145" stroke="#00ff44" stroke-width="1.5"/>
+        <circle cx="480" cy="137" r="2" fill="#00ff44"/>
+        <line x1="480" y1="145" x2="480" y2="220" stroke="#4488ff" stroke-width="1.5"/>
+
+        <!-- Dots indicating more LEDs -->
+        <text x="560" y="140" fill="#64748b" font-size="18" font-family="Share Tech Mono, monospace">···</text>
+        <text x="555" y="155" fill="#64748b" font-size="8" font-family="Share Tech Mono, monospace">más LEDs</text>
+
+        <!-- Formula box -->
+        <rect x="20" y="280" width="640" height="80" rx="8" fill="#0f172a" stroke="#1e293b" stroke-width="1"/>
+        <text x="36" y="305" fill="#ffaa00" font-size="11" font-family="Share Tech Mono, monospace">FÓRMULA RESISTENCIA:</text>
+        <text x="36" y="326" fill="#e2e8f0" font-size="12" font-family="Share Tech Mono, monospace">R = (Vcc - Vled) / Iled</text>
+        <text x="36" y="344" fill="#64748b" font-size="10" font-family="Share Tech Mono, monospace">Ejemplo: R = (5V - 2V) / 0.02A = 150Ω  →  usar 150Ω o 100Ω (más brillo)</text>
+        <text x="400" y="305" fill="#00ff88" font-size="10" font-family="Share Tech Mono, monospace">LED verde: Vf=2.0-2.2V  If=20mA</text>
+        <text x="400" y="320" fill="#ff6644" font-size="10" font-family="Share Tech Mono, monospace">LED rojo:  Vf=1.8-2.0V  If=20mA</text>
+        <text x="400" y="335" fill="#ffbb00" font-size="10" font-family="Share Tech Mono, monospace">LED ámbar: Vf=2.0-2.2V  If=20mA</text>
+        <text x="400" y="350" fill="#88aaff" font-size="10" font-family="Share Tech Mono, monospace">LED azul:  Vf=3.0-3.4V  If=20mA</text>
+      </svg>
+    </div>
+
+    <div class="schematic-card">
+      <div class="section-title">Lista de Componentes</div>
+      <table class="comp-table">
+        <thead>
+          <tr>
+            <th>Componente</th>
+            <th>Valor / Tipo</th>
+            <th>Cant.</th>
+            <th>Función</th>
+            <th>Precio aprox.</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="comp-badge badge-led">LED 5mm</span></td>
+            <td>Verde, Rojo o Ámbar · 20mA</td>
+            <td id="led-qty">70–120</td>
+            <td>Iluminación del cartel</td>
+            <td>$0.05–0.10 c/u</td>
+          </tr>
+          <tr>
+            <td><span class="comp-badge badge-res">Resistencia</span></td>
+            <td>100Ω–150Ω · 1/4W</td>
+            <td id="res-qty">10–20</td>
+            <td>Limita corriente de cada LED</td>
+            <td>$0.02–0.05 c/u</td>
+          </tr>
+          <tr>
+            <td><span class="comp-badge badge-pwr">Fuente</span></td>
+            <td>5V DC · 1A mínimo</td>
+            <td>1</td>
+            <td>Alimentación del circuito</td>
+            <td>$3–8</td>
+          </tr>
+          <tr>
+            <td><span class="comp-badge badge-con">Conector</span></td>
+            <td>Jack DC 5.5mm hembra</td>
+            <td>1</td>
+            <td>Entrada de alimentación</td>
+            <td>$0.50–1</td>
+          </tr>
+          <tr>
+            <td><span class="comp-badge badge-con">Interruptor</span></td>
+            <td>SPST on/off</td>
+            <td>1</td>
+            <td>Encendido/apagado</td>
+            <td>$0.50–1</td>
+          </tr>
+          <tr>
+            <td><span class="comp-badge badge-res">Placa cobre</span></td>
+            <td>FR4 o baquelita · 10×15cm</td>
+            <td>1–2</td>
+            <td>Soporte del circuito</td>
+            <td>$1–3</td>
+          </tr>
+          <tr>
+            <td><span class="comp-badge badge-res">Cloruro férrico</span></td>
+            <td>FeCl₃ solución</td>
+            <td>250ml</td>
+            <td>Grabado de pistas</td>
+            <td>$2–4</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="warn-box">Un cartel ABIERTO con 80 LEDs consume aprox. 1.6A · 5V = 8W. Usar fuente de al menos 2A para margen de seguridad.</div>
+    </div>
+
+  </div>
+
+  <!-- TAB 3: PCB -->
+  <div class="tab-panel" id="tab-pcb">
+
+    <div class="schematic-card">
+      <div class="section-title">Diseño de Pistas PCB (Vista Superior)</div>
+      <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1rem;">
+        Pistas de cobre en negro (para imprimir en espejo y transferir). Los círculos grandes = agujeros para LEDs · Los pequeños = agujeros para resistencias.
+      </p>
+
+      <div class="bw-toggle">
+        <input type="checkbox" id="bw-mode" onchange="toggleBW()">
+        <label for="bw-mode">Modo impresión (Blanco y Negro)</label>
+      </div>
+
+      <div id="pcb-container" class="pcb-view">
+        <svg class="pcb-svg" id="pcb-svg" viewBox="0 0 680 460" xmlns="http://www.w3.org/2000/svg">
+          <!-- PCB board outline -->
+          <rect x="10" y="10" width="660" height="440" rx="8" fill="#006633" stroke="#004422" stroke-width="2" id="pcb-bg"/>
+
+          <!-- Grid of LED holes - ABIERTO pattern (7 columns × 5 rows) -->
+          <!-- Row bus lines (horizontal copper traces) -->
+          <g id="pcb-traces">
+            <!-- VCC trace (top) -->
+            <line x1="20" y1="40" x2="660" y2="40" stroke="#d4956a" stroke-width="3" id="vcc-trace"/>
+            <text x="25" y="36" fill="#d4956a" font-size="9" font-family="Share Tech Mono, monospace" id="vcc-label">+ VCC</text>
+
+            <!-- GND trace (bottom) -->
+            <line x1="20" y1="420" x2="660" y2="420" stroke="#d4956a" stroke-width="3" id="gnd-trace"/>
+            <text x="25" y="416" fill="#d4956a" font-size="9" font-family="Share Tech Mono, monospace" id="gnd-label">- GND</text>
+
+            <!-- Column traces -->
+            <g id="col-traces" stroke="#d4956a" stroke-width="1.5" fill="none">
+              <line x1="80" y1="40" x2="80" y2="420"/>
+              <line x1="170" y1="40" x2="170" y2="420"/>
+              <line x1="260" y1="40" x2="260" y2="420"/>
+              <line x1="350" y1="40" x2="350" y2="420"/>
+              <line x1="440" y1="40" x2="440" y2="420"/>
+              <line x1="530" y1="40" x2="530" y2="420"/>
+              <line x1="620" y1="40" x2="620" y2="420"/>
+            </g>
+
+            <!-- Resistor traces (from VCC to each column) -->
+            <g stroke="#b87333" stroke-width="2" fill="none">
+              <line x1="80" y1="40" x2="80" y2="65"/>
+              <line x1="170" y1="40" x2="170" y2="65"/>
+              <line x1="260" y1="40" x2="260" y2="65"/>
+              <line x1="350" y1="40" x2="350" y2="65"/>
+              <line x1="440" y1="40" x2="440" y2="65"/>
+              <line x1="530" y1="40" x2="530" y2="65"/>
+              <line x1="620" y1="40" x2="620" y2="65"/>
+            </g>
+          </g>
+
+          <!-- Resistor pads -->
+          <g id="res-pads">
+            <g fill="#d4956a" id="res-holes">
+              <!-- 7 resistors, one per column -->
+              <circle cx="80" cy="72" r="6" fill="#006633" stroke="#d4956a" stroke-width="2"/>
+              <circle cx="80" cy="58" r="6" fill="#006633" stroke="#d4956a" stroke-width="2"/>
+              <circle cx="170" cy="72" r="6" fill="#006633" stroke="#d4956a" stroke-width="2"/>
+              <circle cx="170" cy="58" r="6" fill="#006633" stroke="#d4956a" stroke-width="2"/>
+              <circle cx="260" cy="72" r="6" fill="#006633" stroke="#d4956a" stroke-width="2"/>
+              <circle cx="260" cy="58" r="6" fill="#006633" stroke="#d4956a" stroke-width="2"/>
+              <circle cx="350" cy="72" r="6" fill="#006633" stroke="#d4956a" stroke-width="2"/>
+              <circle cx="350" cy="58" r="6" fill="#006633" stroke="#d4956a" stroke-width="2"/>
+              <circle cx="440" cy="72" r="6" fill="#006633" stroke="#d4956a" stroke-width="2"/>
+              <circle cx="440" cy="58" r="6" fill="#006633" stroke="#d4956a" stroke-width="2"/>
+              <circle cx="530" cy="72" r="6" fill="#006633" stroke="#d4956a" stroke-width="2"/>
+              <circle cx="530" cy="58" r="6" fill="#006633" stroke="#d4956a" stroke-width="2"/>
+              <circle cx="620" cy="72" r="6" fill="#006633" stroke="#d4956a" stroke-width="2"/>
+              <circle cx="620" cy="58" r="6" fill="#006633" stroke="#d4956a" stroke-width="2"/>
+            </g>
+            <!-- Resistor labels -->
+            <g fill="#ffaa00" font-size="7" font-family="Share Tech Mono, monospace">
+              <text x="88" y="64">R1</text>
+              <text x="178" y="64">R2</text>
+              <text x="268" y="64">R3</text>
+              <text x="358" y="64">R4</text>
+              <text x="448" y="64">R5</text>
+              <text x="538" y="64">R6</text>
+              <text x="628" y="64">R7</text>
+            </g>
+          </g>
+
+          <!-- LED pads (5 rows of 7 LEDs) -->
+          <g id="led-pads">
+            <!-- Row 1 -->
+            <g id="led-row1">
+              <circle cx="80"  cy="140" r="9" fill="#006633" stroke="#d4956a" stroke-width="2.5"/><circle cx="80"  cy="140" r="3" fill="#d4956a"/>
+              <circle cx="170" cy="140" r="9" fill="#006633" stroke="#d4956a" stroke-width="2.5"/><circle cx="170" cy="140" r="3" fill="#d4956a"/>
+              <circle cx="260" cy="140" r="9" fill="#006633" stroke="#d4956a" stroke-width="2.5"/><circle cx="260" cy="140" r="3" fill="#d4956a"/>
+              <circle cx="350" cy="140" r="9" fill="#006633" stroke="#d4956a" stroke-width="2.5"/><circle cx="350" cy="140" r="3" fill="#d4956a"/>
+              <circle cx="440" cy="140" r="9" fill="#006633" stroke="#d4956a" stroke-width="2.5"/><circle cx="440" cy="140" r="3" fill="#d4956a"/>
+              <circle cx="530" cy="140" r="9" fill="#006633" stroke="#d4956a" stroke-width="2.5"/><circle cx="530" cy="140" r="3" fill="#d4956a"/>
+              <circle cx="620" cy="140" r="9" fill="#006633" stroke="#d4956a" stroke-width="2.5"/><circle cx="620" cy="140" r="3" fill="#d4956a"/>
+            </g>
+            <!-- Row 2 -->
+            <g id="led-row2">
+              <circle cx="80"  cy="220" r="9" fill="#006633" stroke="#d4956a" stroke-width="2.5"/><circle cx="80"  cy="220" r="3" fill="#d4956a"/>
+              <circle cx="170" cy="220" r="9" fill="#006633" stroke="#d4956a" stroke-width="2.5"/><circle cx="170" cy="220" r="3" fill="#d4956a"/>
+              <circle cx="260" cy="220" r="9" fill="#006633" stroke="#d4956a" stroke-width="2.5"/><circle cx="260" cy="220" r="3" fill="#d4956a"/>
+              <circle cx="350" cy="220" r="9" fill="#006633" stroke="#d4956a" stroke-width="2.5"/><circle cx="350" cy="220" r="3" fill="#d4956a"/>
+              <circle cx="440" cy="220" r="9" fill="#006633" stroke="#d4956a" stroke-width="2.5"/><circle cx="440" cy="220" r="3" fill="#d4956a"/>
+              <circle cx="530" cy="220" r="9" fill="#006633" stroke="#d4956a" stroke-width="2.5"/><circle cx="530" cy="220" r="3" fill="#d4956a"/>
+              <circle cx="620" cy="220" r="9" fill="#006633" stroke="#d4956a" stroke-width="2.5"/><circle cx="620" cy="220" r="3" fill="#d4956a"/>
+            </g>
+            <!-- Row 3 -->
+            <g id="led-row3">
+              <circle cx="80"  cy="300" r="9" fill="#006633" stroke="#d4956a" stroke-width="2.5"/><circle cx="80"  cy="300" r="3" fill="#d4956a"/>
+              <circle cx="170" cy="300" r="9" fill="#006633" stroke="#d4956a" stroke-width="2.5"/><circle cx="170" cy="300" r="3" fill="#d4956a"/>
+              <circle cx="260" cy="300" r="9" fill="#006633" stroke="#d4956a" stroke-width="2.5"/><circle cx="260" cy="300" r="3" fill="#d4956a"/>
+              <circle cx="350" cy="300" r="9" fill="#006633" stroke="#d4956a" stroke-width="2.5"/><circle cx="350" cy="300" r="3" fill="#d4956a"/>
+              <circle cx="440" cy="300" r="9" fill="#006633" stroke="#d4956a" stroke-width="2.5"/><circle cx="440" cy="300" r="3" fill="#d4956a"/>
+              <circle cx="530" cy="300" r="9" fill="#006633" stroke="#d4956a" stroke-width="2.5"/><circle cx="530" cy="300" r="3" fill="#d4956a"/>
+              <circle cx="620" cy="300" r="9" fill="#006633" stroke="#d4956a" stroke-width="2.5"/><circle cx="620" cy="300" r="3" fill="#d4956a"/>
+            </g>
+            <!-- Row 4 -->
+            <g id="led-row4">
+              <circle cx="80"  cy="370" r="9" fill="#006633" stroke="#d4956a" stroke-width="2.5"/><circle cx="80"  cy="370" r="3" fill="#d4956a"/>
+              <circle cx="170" cy="370" r="9" fill="#006633" stroke="#d4956a" stroke-width="2.5"/><circle cx="170" cy="370" r="3" fill="#d4956a"/>
+              <circle cx="260" cy="370" r="9" fill="#006633" stroke="#d4956a" stroke-width="2.5"/><circle cx="260" cy="370" r="3" fill="#d4956a"/>
+              <circle cx="350" cy="370" r="9" fill="#006633" stroke="#d4956a" stroke-width="2.5"/><circle cx="350" cy="370" r="3" fill="#d4956a"/>
+              <circle cx="440" cy="370" r="9" fill="#006633" stroke="#d4956a" stroke-width="2.5"/><circle cx="440" cy="370" r="3" fill="#d4956a"/>
+              <circle cx="530" cy="370" r="9" fill="#006633" stroke="#d4956a" stroke-width="2.5"/><circle cx="530" cy="370" r="3" fill="#d4956a"/>
+              <circle cx="620" cy="370" r="9" fill="#006633" stroke="#d4956a" stroke-width="2.5"/><circle cx="620" cy="370" r="3" fill="#d4956a"/>
+            </g>
+          </g>
+
+          <!-- Labels -->
+          <text x="340" y="456" text-anchor="middle" fill="#4a9e6e" font-size="9" font-family="Share Tech Mono, monospace">PCB CARTEL LED · ESCALA 1:1 · IMPRIMIR EN ESPEJO PARA TRANSFERENCIA</text>
+
+          <!-- Power connector area -->
+          <rect x="20" y="25" width="30" height="20" rx="3" fill="#1e293b" stroke="#ffaa00" stroke-width="1.5"/>
+          <text x="35" y="38" text-anchor="middle" fill="#ffaa00" font-size="7" font-family="Share Tech Mono, monospace">DC IN</text>
+        </svg>
+      </div>
+
+      <div class="ok-box">Para imprimir: Archivo → Imprimir → Escala 100% (sin ajuste) · Papel fotográfico o transfer paper · Tóner láser negro</div>
+      <div class="warn-box">Antes de grabar el cobre, verificar que las pistas tengan al menos 1mm de ancho para soportar la corriente.</div>
+    </div>
+
+  </div>
+
+  <!-- TAB 4: CONEXIONES -->
+  <div class="tab-panel" id="tab-conexion">
+
+    <div class="schematic-card">
+      <div class="section-title">Guía de Conexiones Paso a Paso</div>
+
+      <div class="conn-grid" id="conn-grid">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+
+    <div class="schematic-card" style="margin-top:1rem;">
+      <div class="section-title">Polaridad de los LEDs</div>
+      <svg viewBox="0 0 680 180" style="width:100%">
+        <!-- LED diagram -->
+        <rect x="20" y="20" width="300" height="140" rx="8" fill="#0f172a" stroke="#1e293b" stroke-width="1"/>
+        <!-- LED shape -->
+        <circle cx="110" cy="90" r="35" fill="none" stroke="#00ff44" stroke-width="2"/>
+        <circle cx="110" cy="90" r="30" fill="rgba(0,255,68,0.1)"/>
+        <!-- Flat edge indicator -->
+        <line x1="133" y1="62" x2="133" y2="118" stroke="#00ff44" stroke-width="3"/>
+        <text x="145" y="95" fill="#ff6666" font-size="11" font-family="Share Tech Mono, monospace">← CÁTODO</text>
+        <text x="145" y="110" fill="#ff6666" font-size="9" font-family="Share Tech Mono, monospace">  (pata más corta)</text>
+        <!-- Longer leg -->
+        <line x1="80" y1="90" x2="40" y2="90" stroke="#00ff44" stroke-width="2"/>
+        <text x="25" y="85" text-anchor="end" fill="#00ff88" font-size="9" font-family="Share Tech Mono, monospace">ÁNODO</text>
+        <text x="25" y="98" text-anchor="end" fill="#00ff88" font-size="9" font-family="Share Tech Mono, monospace">(+) largo</text>
+
+        <!-- Explanation -->
+        <rect x="340" y="20" width="320" height="140" rx="8" fill="#0f172a" stroke="#1e293b" stroke-width="1"/>
+        <text x="360" y="50" fill="#ffaa00" font-size="11" font-family="Share Tech Mono, monospace">REGLA DE ORO:</text>
+        <text x="360" y="70" fill="#e2e8f0" font-size="10" font-family="Share Tech Mono, monospace">▸ Pata LARGA = ÁNODO (+) → a Resistencia</text>
+        <text x="360" y="88" fill="#e2e8f0" font-size="10" font-family="Share Tech Mono, monospace">▸ Pata CORTA = CÁTODO (−) → a GND</text>
+        <text x="360" y="106" fill="#e2e8f0" font-size="10" font-family="Share Tech Mono, monospace">▸ Borde PLANO = lado negativo (−)</text>
+        <text x="360" y="130" fill="#ff4444" font-size="10" font-family="Share Tech Mono, monospace">⚠ Invertir la polaridad quema el LED</text>
+        <text x="360" y="146" fill="#64748b" font-size="9" font-family="Share Tech Mono, monospace">Si duda: probar con pila 3V + resistencia 100Ω</text>
+      </svg>
+    </div>
+
+  </div>
+
+  <!-- TAB 5: MANUAL -->
+  <div class="tab-panel" id="tab-manual">
+
+    <div class="schematic-card">
+      <div class="section-title">Manual Completo de Fabricación</div>
+
+      <ol class="step-list">
+        <li class="step-item">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <h4>Preparar el diseño para imprimir</h4>
+            <p>Imprimir el diseño de pistas en papel fotográfico brillante o papel transfer usando impresora LÁSER (tóner negro denso). Imprimir en espejo (imagen invertida horizontalmente). No usar impresora de tinta — el tóner es esencial para el proceso de transferencia.</p>
+            <div class="warn-box">Imprimir SIEMPRE en espejo para que las pistas queden orientadas correctamente al transferir al cobre.</div>
+          </div>
+        </li>
+
+        <li class="step-item">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <h4>Limpiar la placa de cobre</h4>
+            <p>Lijar suavemente la superficie de cobre con lija fina (600-1000) hasta obtener un acabado brillante y uniforme. Limpiar con acetona o alcohol isopropílico para eliminar grasa. No tocar la superficie con los dedos después de limpiar. La grasa de la piel impide la adherencia del tóner.</p>
+          </div>
+        </li>
+
+        <li class="step-item">
+          <div class="step-num">3</div>
+          <div class="step-content">
+            <h4>Transferencia del diseño (método plancha)</h4>
+            <p>Colocar el papel impreso con el tóner hacia la placa de cobre. Asegurar con cinta resistente al calor. Planchar con temperatura alta (algodón) durante 3-5 minutos con movimientos circulares y presión firme. Dejar enfriar 5 minutos, luego sumergir en agua tibia y retirar el papel lentamente.</p>
+            <div class="ok-box">El tóner debe quedar perfectamente adherido al cobre. Revisar todas las líneas finas antes de grabar.</div>
+          </div>
+        </li>
+
+        <li class="step-item">
+          <div class="step-num">4</div>
+          <div class="step-content">
+            <h4>Grabado con cloruro férrico</h4>
+            <p>Preparar solución de cloruro férrico (FeCl₃) en recipiente plástico. Sumergir la placa durante 15-30 minutos con movimiento constante. El cobre expuesto (sin tóner) se disolverá. Las zonas con tóner quedan protegidas. Enjuagar con agua abundante. Usar guantes y gafas — el FeCl₃ mancha permanentemente.</p>
+            <div class="warn-box">No usar recipientes metálicos. Trabajar en área ventilada. Neutralizar el cloruro férrico usado con bicarbonato antes de desechar.</div>
+          </div>
+        </li>
+
+        <li class="step-item">
+          <div class="step-num">5</div>
+          <div class="step-content">
+            <h4>Limpiar el tóner y verificar pistas</h4>
+            <p>Limpiar el tóner restante con acetona. Inspeccionar todas las pistas bajo buena luz. Cortes en pistas: reparar con un trazador de circuitos o estañando la zona. Cortocircuitos: raspar con exacto con cuidado. Usar multímetro en modo continuidad para verificar cada tramo.</p>
+          </div>
+        </li>
+
+        <li class="step-item">
+          <div class="step-num">6</div>
+          <div class="step-content">
+            <h4>Perforar los agujeros</h4>
+            <p>Usar taladro de mano o Dremel con broca de 0.8-1.0mm para LEDs y resistencias. Los marcadores circulares en la PCB indican la posición exacta. Perforar perpendicular a la placa. No aplicar demasiada presión para evitar despegar las pistas.</p>
+          </div>
+        </li>
+
+        <li class="step-item">
+          <div class="step-num">7</div>
+          <div class="step-content">
+            <h4>Soldar resistencias primero</h4>
+            <p>Insertar todas las resistencias (no tienen polaridad). Doblar las patitas para que no caigan. Soldar con estaño 60/40 usando cautín de 25-30W. Punta limpia y estañada. Aplicar calor 2-3 segundos, agregar estaño, retirar. La soldadura debe ser brillante y en forma de montaña suave. Cortar el exceso de patita.</p>
+            <div class="ok-box">Buena soldadura: brillante, en forma de cono. Mala soldadura (fría): opaca, irregular → recalentar.</div>
+          </div>
+        </li>
+
+        <li class="step-item">
+          <div class="step-num">8</div>
+          <div class="step-content">
+            <h4>Soldar LEDs con polaridad correcta</h4>
+            <p>Pata larga (+) va hacia la resistencia (VCC). Pata corta (−) va hacia GND. Verificar la orientación antes de soldar — corregir es difícil después. Soldar cada LED y probar antes de continuar con el siguiente. Los LEDs deben quedar a la misma altura para un aspecto prolijo.</p>
+          </div>
+        </li>
+
+        <li class="step-item">
+          <div class="step-num">9</div>
+          <div class="step-content">
+            <h4>Conectar la alimentación y probar</h4>
+            <p>Conectar el jack DC o cables directamente a las pistas VCC y GND. Verificar polaridad con multímetro antes de conectar la fuente. Conectar fuente de 5V y verificar que todos los LEDs enciendan. Un LED apagado puede indicar mala soldadura, LED invertido o resistencia defectuosa.</p>
+            <div class="warn-box">Nunca conectar a 12V — los LEDs de 5mm se queman instantáneamente con voltaje excesivo sin la resistencia correcta.</div>
+          </div>
+        </li>
+
+        <li class="step-item">
+          <div class="step-num">10</div>
+          <div class="step-content">
+            <h4>Terminación y montaje</h4>
+            <p>Aplicar barniz protector (conformal coating) sobre las pistas para evitar oxidación. Montar en caja acrílica o marco de madera. Para mayor brillo, colocar difusor acrílico translúcido a 5-10mm de los LEDs. Asegurar la fuente de alimentación dentro del gabinete.</p>
+          </div>
+        </li>
+      </ol>
+    </div>
+
+    <div class="schematic-card" style="margin-top:1rem;">
+      <div class="section-title">Tabla de Resistencias Recomendadas</div>
+      <table class="comp-table">
+        <thead>
+          <tr><th>Voltaje fuente</th><th>Color LED</th><th>Vf típico</th><th>Resistencia</th><th>Corriente real</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>5V</td><td>Verde / Ámbar</td><td>2.1V</td><td style="color:var(--neon-amber);font-family:Share Tech Mono,monospace">150Ω</td><td>19mA</td></tr>
+          <tr><td>5V</td><td>Rojo</td><td>1.9V</td><td style="color:var(--neon-amber);font-family:Share Tech Mono,monospace">150Ω</td><td>21mA</td></tr>
+          <tr><td>5V</td><td>Azul / Blanco</td><td>3.2V</td><td style="color:var(--neon-amber);font-family:Share Tech Mono,monospace">100Ω</td><td>18mA</td></tr>
+          <tr><td>12V</td><td>Verde / Ámbar</td><td>2.1V</td><td style="color:var(--neon-amber);font-family:Share Tech Mono,monospace">470Ω</td><td>21mA</td></tr>
+          <tr><td>12V</td><td>Rojo</td><td>1.9V</td><td style="color:var(--neon-amber);font-family:Share Tech Mono,monospace">470Ω</td><td>21mA</td></tr>
+          <tr><td>12V</td><td>Azul / Blanco</td><td>3.2V</td><td style="color:var(--neon-amber);font-family:Share Tech Mono,monospace">390Ω</td><td>22mA</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+</div><!-- /container -->
+
+<script>
+// =====================
+// LED FONT (5x7 pixel font for Latin chars)
+// =====================
+const FONT = {
+  'A': [
+    [0,1,1,1,0],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,1,1,1,1],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,0,0,0,1]
+  ],
+  'B': [
+    [1,1,1,1,0],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,1,1,1,0],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,1,1,1,0]
+  ],
+  'I': [
+    [1,1,1,1,1],
+    [0,0,1,0,0],
+    [0,0,1,0,0],
+    [0,0,1,0,0],
+    [0,0,1,0,0],
+    [0,0,1,0,0],
+    [1,1,1,1,1]
+  ],
+  'E': [
+    [1,1,1,1,1],
+    [1,0,0,0,0],
+    [1,0,0,0,0],
+    [1,1,1,1,0],
+    [1,0,0,0,0],
+    [1,0,0,0,0],
+    [1,1,1,1,1]
+  ],
+  'R': [
+    [1,1,1,1,0],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,1,1,1,0],
+    [1,1,0,0,0],
+    [1,0,1,0,0],
+    [1,0,0,1,0]
+  ],
+  'T': [
+    [1,1,1,1,1],
+    [0,0,1,0,0],
+    [0,0,1,0,0],
+    [0,0,1,0,0],
+    [0,0,1,0,0],
+    [0,0,1,0,0],
+    [0,0,1,0,0]
+  ],
+  'O': [
+    [0,1,1,1,0],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [0,1,1,1,0]
+  ],
+  'C': [
+    [0,1,1,1,0],
+    [1,0,0,0,1],
+    [1,0,0,0,0],
+    [1,0,0,0,0],
+    [1,0,0,0,0],
+    [1,0,0,0,1],
+    [0,1,1,1,0]
+  ],
+  'D': [
+    [1,1,1,1,0],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,1,1,1,0]
+  ],
+  'N': [
+    [1,0,0,0,1],
+    [1,1,0,0,1],
+    [1,0,1,0,1],
+    [1,0,0,1,1],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,0,0,0,1]
+  ],
+  'G': [
+    [0,1,1,1,0],
+    [1,0,0,0,1],
+    [1,0,0,0,0],
+    [1,0,1,1,1],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [0,1,1,1,0]
+  ],
+  'S': [
+    [0,1,1,1,1],
+    [1,0,0,0,0],
+    [1,0,0,0,0],
+    [0,1,1,1,0],
+    [0,0,0,0,1],
+    [0,0,0,0,1],
+    [1,1,1,1,0]
+  ],
+  ' ': [
+    [0,0,0],
+    [0,0,0],
+    [0,0,0],
+    [0,0,0],
+    [0,0,0],
+    [0,0,0],
+    [0,0,0]
+  ]
+};
+
+const SIGN_DATA = {
+  'ABIERTO': { color: 'green', label: 'Verde', chars: 'ABIERTO' },
+  'CERRADO': { color: 'red',   label: 'Rojo',  chars: 'CERRADO' },
+  'NEGOCIO': { color: 'amber', label: 'Ámbar', chars: 'NEGOCIO' }
+};
+
+let currentSign = 'ABIERTO';
+let currentAnim = 'static';
+let blinkInterval = null;
+
+function buildMatrix(text) {
+  const rows = 7;
+  const cols = [];
+  for (const ch of text) {
+    const glyph = FONT[ch] || FONT[' '];
+    const glyphW = glyph[0].length;
+    for (let r = 0; r < rows; r++) {
+      if (!cols[r]) cols[r] = [];
+      for (let c = 0; c < glyphW; c++) {
+        cols[r].push(glyph[r][c]);
+      }
+      // spacing
+      cols[r].push(0);
+    }
+  }
+  return cols;
+}
+
+function renderDisplay(sign, animClass) {
+  const data = SIGN_DATA[sign];
+  const matrix = buildMatrix(data.chars);
+  const rows = matrix.length; // 7
+  const cols = matrix[0].length;
+  const grid = document.getElementById('dot-grid');
+  grid.style.gridTemplateColumns = `repeat(${cols}, 10px)`;
+  grid.style.gridTemplateRows = `repeat(${rows}, 10px)`;
+  grid.className = 'dot-grid' + (animClass === 'blink' ? ' blink-mode' : '');
+  grid.innerHTML = '';
+
+  let onCount = 0;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const dot = document.createElement('div');
+      dot.className = 'led-dot';
+      if (matrix[r][c]) {
+        dot.classList.add('on-' + data.color);
+        onCount++;
+      }
+      grid.appendChild(dot);
+    }
+  }
+
+  // Update info bar
+  document.getElementById('info-leds').textContent = onCount;
+  const current = (onCount * 20).toFixed(0);
+  document.getElementById('info-current').textContent = current;
+  document.getElementById('info-res').textContent = data.color === 'red' ? '150' : '150';
+  document.getElementById('info-color').textContent = data.label;
+
+  // Update connection guide
+  buildConnGrid(sign, onCount, data.color);
+}
+
+function buildConnGrid(sign, ledCount, color) {
+  const grid = document.getElementById('conn-grid');
+  if (!grid) return;
+  const colCount = FONT[sign[0]][0].length * sign.length + sign.length;
+  const cards = [
+    { title: 'LETRA x RESISTENCIA', items: sign.split('').map((ch, i) => ({ col: ch, val: '150Ω → Columna ' + (i+1) })) },
+    { title: 'ALIMENTACIÓN', items: [
+      { col: 'VCC (+)', val: 'Pata larga LED → R → +5V' },
+      { col: 'GND (−)', val: 'Pata corta LED → GND' },
+      { col: 'Consumo', val: (ledCount * 20) + 'mA total' }
+    ]},
+    { title: 'ORDEN DE SOLDADURA', items: [
+      { col: '1°', val: 'Jack DC en placa' },
+      { col: '2°', val: 'Resistencias (7 unidades)' },
+      { col: '3°', val: 'LEDs fila por fila' },
+      { col: '4°', val: 'Verificar con multímetro' }
+    ]}
+  ];
+
+  grid.innerHTML = cards.map(card => `
+    <div class="conn-card">
+      <h4>${card.title}</h4>
+      ${card.items.map(item => `
+        <div class="led-row">
+          <div class="led-indicator ind-${color}"></div>
+          <div style="flex:1;font-size:0.78rem;">${item.col}</div>
+          <div class="val" style="font-size:0.75rem;">${item.val}</div>
+        </div>
+      `).join('')}
+    </div>
+  `).join('');
+}
+
+function setSign(name) {
+  currentSign = name;
+  document.querySelectorAll('.sign-btn').forEach(b => {
+    b.className = 'sign-btn';
+    if (b.textContent === name) {
+      b.classList.add('active-' + name.toLowerCase());
+    }
+  });
+  renderDisplay(currentSign, currentAnim);
+}
+
+function setAnim(type) {
+  currentAnim = type;
+  document.querySelectorAll('.anim-btn').forEach(b => {
+    b.classList.toggle('active', b.textContent.toLowerCase().includes(type === 'static' ? 'stático' : 'par'));
+  });
+  renderDisplay(currentSign, currentAnim);
+}
+
+function showTab(id) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function toggleBW() {
+  const bw = document.getElementById('bw-mode').checked;
+  const svg = document.getElementById('pcb-svg');
+  const bg = document.getElementById('pcb-bg');
+  const container = document.getElementById('pcb-container');
+
+  if (bw) {
+    bg.setAttribute('fill', 'white');
+    bg.setAttribute('stroke', '#000');
+    container.style.background = '#fff';
+    svg.querySelectorAll('[stroke="#d4956a"]').forEach(el => el.setAttribute('stroke', '#000'));
+    svg.querySelectorAll('[fill="#d4956a"]').forEach(el => el.setAttribute('fill', '#000'));
+    svg.querySelectorAll('[fill="#006633"]').forEach(el => el.setAttribute('fill', 'white'));
+    svg.querySelectorAll('#vcc-label, #gnd-label').forEach(el => el.setAttribute('fill', '#000'));
+    svg.querySelectorAll('[fill="#4a9e6e"]').forEach(el => el.setAttribute('fill', '#000'));
+    svg.querySelectorAll('[fill="#ffaa00"]').forEach(el => el.setAttribute('fill', '#000'));
+    svg.querySelectorAll('[fill="#1e293b"]').forEach(el => el.setAttribute('fill', 'white'));
+  } else {
+    location.reload();
+  }
+}
+
+// Init
+renderDisplay('ABIERTO', 'static');
+</script>
+</body>
+</html>
